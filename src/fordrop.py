@@ -44,7 +44,7 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
         pubsub = self['xep_0060']
         headers = {'content-type': 'application/json', 'User-Agent': 'fordrop/beta', 'X_FORDROP_USERNAME': options.django_user, 'X_FORDROP_API_KEY': options.django_api_key}
         while True:
-            uri = "/api/v1/file/?format=json&published=false"
+            uri = "/api/v1/full_file/?format=json&published=false"
             url = options.django_base_url + uri
             try:
                 result = json.loads(requests.get(url, verify=options.django_verify_ssl, headers=headers).content)
@@ -74,7 +74,7 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                     _r = json.loads(check_if_file_exists.content)
                     if _r['meta']['total_count'] > 0:
                         continue
-                r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)
+                #r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)
                 # Figure out the local user account + userprofile, create if missing
                 user_resource_uri = None
                 r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)

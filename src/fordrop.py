@@ -136,7 +136,7 @@ if __name__ == "__main__" :
     parser.add_option('--django-user', action='store', dest='django_user', help='Django user', default=config.get("django", "user"))
     parser.add_option('--django-api-key', action='store', dest='django_api_key', help='Django API-key', default=config.get("django", "api_key"))
     parser.add_option('--django-base-url', action='store', dest='django_base_url', help='Django base URL, ex http://127.0.0.1', default=config.get("django", "base_url"))
-    parser.add_option('--django-verify-ssl', action='store_true', dest='django_verify_ssl', help='Verify the certficate', default=config.get("django", "verify_ssl"))
+    parser.add_option('--django-verify-ssl', action='store_true', dest='django_verify_ssl', help='Verify the certficate', default=config.getboolean("django", "verify_ssl"))
     (options, args) = parser.parse_args()
     if not options.jid:
         parser.error("You need to specify a jid")

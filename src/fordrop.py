@@ -69,7 +69,6 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
         for item in xml.findall('{http://jabber.org/protocol/pubsub#event}event/{http://jabber.org/protocol/pubsub#event}items/{http://jabber.org/protocol/pubsub#event}item'):
             for n in item.getiterator('{http://jabber.org/protocol/pubsub#event}event'):
                 activity = json.loads(n.text)
-
                 check_if_file_exists = requests.get(options.django_base_url + '/api/v1/file/' + '?format=json&uuid=' + activity['object']['id'], verify=options.django_verify_ssl, headers=headers)
                 if check_if_file_exists.status_code == 200:
                     _r = json.loads(check_if_file_exists.content)
@@ -77,6 +76,7 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                         continue
                 r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)
                 # Figure out the local user account + userprofile, create if missing
+                user_resource_uri = None
                 r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)
                 if r.status_code == 200:
                     _r = json.loads(r.content)
@@ -103,11 +103,14 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                                 }
                                 updated_profile = requests.put(options.django_base_url + userprofile_resource_uri + "?format=json", json.dumps(p), verify=options.django_verify_ssl, headers=headers)
                                 print "Created:", user_resource_uri, userprofile_resource_uri
-                file_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'md5': activity['object']['hash']['md5'], 'sha1': activity['object']['hash']['sha1'], 'sha256': activity['object']['hash']['sha256'], 'sha512': activity['object']['hash']['sha512'], 'published': True, 'filename': activity['object']['hash']['sha1'], 'boxes': []}
-                file_uri = options.django_base_url + '/api/v1/file/' + "?format=json"
-                create_file = requests.post(file_uri, data=json.dumps(file_payload), verify=options.django_verify_ssl, headers=headers)
-                print "Created file: %s" % activity['object']['hash']['sha1']
-                #print "%s recieved event: %s" % (self.jid, json.dumps(json.loads(n.text), indent=4))
+                if user_resource_uri:
+                    file_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'md5': activity['object']['hash']['md5'], 'sha1': activity['object']['hash']['sha1'], 'sha256': activity['object']['hash']['sha256'], 'sha512': activity['object']['hash']['sha512'], 'published': True, 'filename': activity['object']['hash']['sha1'], 'boxes': []}
+                    file_uri = options.django_base_url + '/api/v1/file/' + "?format=json"
+                    create_file = requests.post(file_uri, data=json.dumps(file_payload), verify=options.django_verify_ssl, headers=headers)
+                    print "Created file: %s" % activity['object']['hash']['sha1']
+                    #print "%s recieved event: %s" % (self.jid, json.dumps(json.loads(n.text), indent=4))
+                else:
+                    continue
 
     def verbose_print(self, msg):
         if self.verbose:

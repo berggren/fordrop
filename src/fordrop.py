@@ -47,7 +47,7 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
             uri = "/api/v1/file/?format=json&published=false"
             url = options.django_base_url + uri
             try:
-                result = json.loads(requests.get(url, headers=headers).content)
+                result = json.loads(requests.get(url, verify=options.django_verify_ssl, headers=headers).content)
                 for file in result['objects']:
                     nodes = []
                     for box in file['boxes']:
@@ -59,7 +59,7 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                     item.text = json.dumps(file_activity)
                     for node in nodes:
                         pubsub.publish(options.pubsub, node, payload=item)
-                    requests.put(file_uri, json.dumps({'published': 'true'}), headers=headers)
+                    requests.put(file_uri, json.dumps({'published': 'true'}), verify=options.django_verify_ssl, headers=headers)
                     self.verbose_print("File published to nodes %s and database object updated" % nodes)
             except ValueError: pass
             time.sleep(10)
@@ -70,14 +70,14 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
             for n in item.getiterator('{http://jabber.org/protocol/pubsub#event}event'):
                 activity = json.loads(n.text)
 
-                check_if_file_exists = requests.get(options.django_base_url + '/api/v1/file/' + '?format=json&uuid=' + activity['object']['id'], headers=headers)
+                check_if_file_exists = requests.get(options.django_base_url + '/api/v1/file/' + '?format=json&uuid=' + activity['object']['id'], verify=options.django_verify_ssl, headers=headers)
                 if check_if_file_exists.status_code == 200:
                     _r = json.loads(check_if_file_exists.content)
                     if _r['meta']['total_count'] > 0:
                         continue
-                r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], headers=headers)
+                r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)
                 # Figure out the local user account + userprofile, create if missing
-                r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], headers=headers)
+                r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)
                 if r.status_code == 200:
                     _r = json.loads(r.content)
                     if _r['meta']['total_count'] > 0:
@@ -86,9 +86,9 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                     else:
                         user_uri = options.django_base_url + '/api/v1/bare_user/' + "?format=json"
                         user_payload = {'username': activity['actor']['id'], 'is_active': False}
-                        create_user = requests.post(user_uri, data=json.dumps(user_payload), verify=False, headers=headers)
+                        create_user = requests.post(user_uri, data=json.dumps(user_payload), verify=options.django_verify_ssl, headers=headers)
                         if create_user.status_code == 201:
-                            r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], headers=headers)
+                            r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)
                             _r = json.loads(r.content)
                             if _r['meta']['total_count'] > 0:
                                 user_resource_uri = _r['objects'][0]['resource_uri']
@@ -101,12 +101,12 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                                     'bio': activity['actor']['bio'],
                                     'uuid': activity['actor']['id'],
                                 }
-                                updated_profile = requests.put(options.django_base_url + userprofile_resource_uri + "?format=json", json.dumps(p), headers=headers)
+                                updated_profile = requests.put(options.django_base_url + userprofile_resource_uri + "?format=json", json.dumps(p), verify=options.django_verify_ssl, headers=headers)
                                 print "Created:", user_resource_uri, userprofile_resource_uri
                 file_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'md5': activity['object']['hash']['md5'], 'sha1': activity['object']['hash']['sha1'], 'sha256': activity['object']['hash']['sha256'], 'sha512': activity['object']['hash']['sha512'], 'published': True, 'filename': activity['object']['hash']['sha1'], 'boxes': []}
                 file_uri = options.django_base_url + '/api/v1/file/' + "?format=json"
-                create_file = requests.post(file_uri, data=json.dumps(file_payload), verify=False, headers=headers)
-                print "Created file!"
+                create_file = requests.post(file_uri, data=json.dumps(file_payload), verify=options.django_verify_ssl, headers=headers)
+                print "Created file: %s" % activity['object']['hash']['sha1']
                 #print "%s recieved event: %s" % (self.jid, json.dumps(json.loads(n.text), indent=4))
 
     def verbose_print(self, msg):
@@ -136,6 +136,7 @@ if __name__ == "__main__" :
     parser.add_option('--django-user', action='store', dest='django_user', help='Django user', default=config.get("django", "user"))
     parser.add_option('--django-api-key', action='store', dest='django_api_key', help='Django API-key', default=config.get("django", "api_key"))
     parser.add_option('--django-base-url', action='store', dest='django_base_url', help='Django base URL, ex http://127.0.0.1', default=config.get("django", "base_url"))
+    parser.add_option('--django-verify-ssl', action='store_true', dest='django_verify_ssl', help='Verify the certficate', default=config.get("django", "verify_ssl"))
     (options, args) = parser.parse_args()
     if not options.jid:
         parser.error("You need to specify a jid")

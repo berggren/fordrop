@@ -16,6 +16,23 @@ class ActivityStreams:
             activity['target'] = target
         return activity
 
+    def post(self, obj):
+        activity = {}
+        published = obj['time_created']
+        object = {}
+        target = None
+        actor = self.person(obj['author'])
+        object['objectType'] = 'article'
+        object['id'] = obj['uuid']
+        object['content'] = obj['post']
+        activity['published'] = published
+        activity['verb'] = "post"
+        activity['actor'] = actor
+        activity['object'] = object
+        if target:
+            activity['target'] = target
+        return activity
+
     def person(self, obj):
         object = {}
         object['objectType'] = 'person'

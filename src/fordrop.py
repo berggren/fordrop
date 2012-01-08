@@ -38,43 +38,56 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
         if options.django:
             self.django()
         if options.listen:
-            xmpp.add_handler("<message xmlns='jabber:client'><event xmlns='http://jabber.org/protocol/pubsub#event' /></message>", xmpp.pubsub_event_handler, name='Pubsub Event', threaded=False)
+            xmpp.add_handler("<message xmlns='jabber:client'><event xmlns='http://jabber.org/protocol/pubsub#event' /></message>", xmpp.pubsub_event_handler, name='Pubsub Event')
 
     def django(self):
         pubsub = self['xep_0060']
         headers = {'content-type': 'application/json', 'User-Agent': 'fordrop/beta', 'X_FORDROP_USERNAME': options.django_user, 'X_FORDROP_API_KEY': options.django_api_key}
         while True:
-            uri = "/api/v1/full_file/?format=json&published=false"
-            url = options.django_base_url + uri
             try:
-                result = json.loads(requests.get(url, verify=options.django_verify_ssl, headers=headers).content)
-                for file in result['objects']:
-                    nodes = []
-                    for box in file['boxes']:
-                        nodes.append(box['node'])
-                    file_uri = options.django_base_url + file['resource_uri'] + "?format=json"
-                    activity = ActivityStreams()
-                    file_activity = activity.file(file)
-                    item = ET.Element('event')
-                    item.text = json.dumps(file_activity)
-                    for node in nodes:
-                        pubsub.publish(options.pubsub, node, payload=item)
-                    requests.put(file_uri, json.dumps({'published': 'true'}), verify=options.django_verify_ssl, headers=headers)
-                    self.verbose_print("File published to nodes %s and database object updated" % nodes)
+                files_to_publish = json.loads(requests.get(options.django_base_url + '/api/v1/full_file/?format=json&published=false', verify=options.django_verify_ssl, headers=headers).content)
+                posts_to_publish = json.loads(requests.get(options.django_base_url + '/api/v1/full_post/?format=json&published=false', verify=options.django_verify_ssl, headers=headers).content)
+                if files_to_publish['objects']:
+                    for file in files_to_publish['objects']:
+                        nodes = [x['node'] for x in file['boxes']]
+                        if not nodes:
+                            continue
+                        activity = ActivityStreams()
+                        item = ET.Element('event')
+                        item.text = json.dumps(activity.file(file))
+                        for node in nodes:
+                            pubsub.publish(options.pubsub, node, payload=item)
+                        requests.put(options.django_base_url + file['resource_uri'] + "?format=json", json.dumps({'published': 'true'}), verify=options.django_verify_ssl, headers=headers)
+                        self.verbose_print("File %s published to %s" % (file['sha1'], nodes))
+                if posts_to_publish['objects']:
+                    for post in posts_to_publish['objects']:
+                        nodes = [x['node'] for x in post['boxes']]
+                        if not nodes:
+                            continue
+                        activity = ActivityStreams()
+                        item = ET.Element('event')
+                        item.text = json.dumps(activity.post(post))
+                        for node in nodes:
+                            pubsub.publish(options.pubsub, node, payload=item)
+                        requests.put(options.django_base_url + post['resource_uri'] + "?format=json", json.dumps({'published': 'true'}), verify=options.django_verify_ssl, headers=headers)
+                        self.verbose_print("Post from %s published to %s" % (post['author']['profile']['name'], nodes))
             except ValueError: pass
-            time.sleep(10)
+            time.sleep(2)
 
     def pubsub_event_handler(self, xml):
         headers = {'content-type': 'application/json', 'User-Agent': 'fordrop/beta', 'X_FORDROP_USERNAME': options.django_user, 'X_FORDROP_API_KEY': options.django_api_key}
         for item in xml.findall('{http://jabber.org/protocol/pubsub#event}event/{http://jabber.org/protocol/pubsub#event}items/{http://jabber.org/protocol/pubsub#event}item'):
             for n in item.getiterator('{http://jabber.org/protocol/pubsub#event}event'):
                 activity = json.loads(n.text)
-                check_if_file_exists = requests.get(options.django_base_url + '/api/v1/file/' + '?format=json&uuid=' + activity['object']['id'], verify=options.django_verify_ssl, headers=headers)
-                if check_if_file_exists.status_code == 200:
-                    _r = json.loads(check_if_file_exists.content)
+                check_if_object_exists = None
+                if activity['object']['objectType'] == "fordrop_file":
+                    check_if_object_exists = requests.get(options.django_base_url + '/api/v1/file/' + '?format=json&uuid=' + activity['object']['id'], verify=options.django_verify_ssl, headers=headers)
+                if activity['object']['objectType'] == "article":
+                    check_if_object_exists = requests.get(options.django_base_url + '/api/v1/post/' + '?format=json&uuid=' + activity['object']['id'], verify=options.django_verify_ssl, headers=headers)
+                if check_if_object_exists and check_if_object_exists.status_code == 200:
+                    _r = json.loads(check_if_object_exists.content)
                     if _r['meta']['total_count'] > 0:
                         continue
-                #r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)
                 # Figure out the local user account + userprofile, create if missing
                 user_resource_uri = None
                 r = requests.get(options.django_base_url + '/api/v1/user/' + '?format=json&username=' + activity['actor']['id'], verify=options.django_verify_ssl, headers=headers)
@@ -101,14 +114,18 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                                     'bio': activity['actor']['bio'],
                                     'uuid': activity['actor']['id'],
                                 }
-                                updated_profile = requests.put(options.django_base_url + userprofile_resource_uri + "?format=json", json.dumps(p), verify=options.django_verify_ssl, headers=headers)
+                                requests.put(options.django_base_url + userprofile_resource_uri + "?format=json", json.dumps(p), verify=options.django_verify_ssl, headers=headers)
                                 print "Created:", user_resource_uri, userprofile_resource_uri
-                if user_resource_uri:
+                if user_resource_uri and activity['object']['objectType'] is "fordrop_file":
                     file_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'md5': activity['object']['hash']['md5'], 'sha1': activity['object']['hash']['sha1'], 'sha256': activity['object']['hash']['sha256'], 'sha512': activity['object']['hash']['sha512'], 'published': True, 'filename': activity['object']['hash']['sha1'], 'boxes': []}
                     file_uri = options.django_base_url + '/api/v1/file/' + "?format=json"
-                    create_file = requests.post(file_uri, data=json.dumps(file_payload), verify=options.django_verify_ssl, headers=headers)
+                    requests.post(file_uri, data=json.dumps(file_payload), verify=options.django_verify_ssl, headers=headers)
                     print "Created file: %s" % activity['object']['hash']['sha1']
-                    #print "%s recieved event: %s" % (self.jid, json.dumps(json.loads(n.text), indent=4))
+                elif user_resource_uri and activity['object']['objectType'] is "article":
+                    post_payload = {'author': user_resource_uri, 'uuid': activity['object']['id'], 'post': activity['object']['content'], 'content_object': '/api/v1/user/2/', 'published': True, 'boxes': []}
+                    post_uri = options.django_base_url + '/api/v1/post/' + "?format=json"
+                    requests.post(post_uri, data=json.dumps(post_payload), verify=options.django_verify_ssl, headers=headers)
+                    print "Created post from %s" % activity['actor']['displayName']
                 else:
                     continue
 

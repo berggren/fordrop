@@ -70,7 +70,7 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                         for node in nodes:
                             pubsub.publish(options.pubsub, node, payload=item)
                         requests.put(options.django_base_url + post['resource_uri'] + "?format=json", json.dumps({'published': 'true'}), verify=options.django_verify_ssl, headers=headers)
-                        self.verbose_print("Post from %s published to %s" % (post['author']['profile']['name'], nodes))
+                        self.verbose_print("Post from %s published to %s" % (post['user']['profile']['name'], nodes))
             except ValueError: pass
             time.sleep(2)
 

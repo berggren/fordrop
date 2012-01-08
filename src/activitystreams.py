@@ -21,7 +21,7 @@ class ActivityStreams:
         published = obj['time_created']
         object = {}
         target = None
-        actor = self.person(obj['author'])
+        actor = self.person(obj['user'])
         object['objectType'] = 'article'
         object['id'] = obj['uuid']
         object['content'] = obj['post']

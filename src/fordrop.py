@@ -116,13 +116,13 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                                 }
                                 requests.put(options.django_base_url + userprofile_resource_uri + "?format=json", json.dumps(p), verify=options.django_verify_ssl, headers=headers)
                                 print "Created:", user_resource_uri, userprofile_resource_uri
-                if user_resource_uri and activity['object']['objectType'] is "fordrop_file":
+                if user_resource_uri and activity['object']['objectType'] == "fordrop_file":
                     file_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'md5': activity['object']['hash']['md5'], 'sha1': activity['object']['hash']['sha1'], 'sha256': activity['object']['hash']['sha256'], 'sha512': activity['object']['hash']['sha512'], 'published': True, 'filename': activity['object']['hash']['sha1'], 'boxes': []}
                     file_uri = options.django_base_url + '/api/v1/file/' + "?format=json"
                     requests.post(file_uri, data=json.dumps(file_payload), verify=options.django_verify_ssl, headers=headers)
                     print "Created file: %s" % activity['object']['hash']['sha1']
-                elif user_resource_uri and activity['object']['objectType'] is "article":
-                    post_payload = {'author': user_resource_uri, 'uuid': activity['object']['id'], 'post': activity['object']['content'], 'content_object': '/api/v1/user/2/', 'published': True, 'boxes': []}
+                elif user_resource_uri and activity['object']['objectType'] == "article":
+                    post_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'post': activity['object']['content'], 'published': True, 'boxes': []}
                     post_uri = options.django_base_url + '/api/v1/post/' + "?format=json"
                     requests.post(post_uri, data=json.dumps(post_payload), verify=options.django_verify_ssl, headers=headers)
                     print "Created post from %s" % activity['actor']['displayName']

@@ -123,12 +123,12 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                                     'uuid': activity['actor']['id'],
                                 }
                                 requests.put(options.django_base_url + userprofile_resource_uri + "?format=json", json.dumps(p), verify=options.django_verify_ssl, headers=headers)
-                                print "Created:", user_resource_uri, userprofile_resource_uri
+                                self.verbose_print("Created: %s and %s" % (user_resource_uri, userprofile_resource_uri))
                 if user_resource_uri and activity['object']['objectType'] == "fordrop_file":
                     file_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'md5': activity['object']['hash']['md5'], 'sha1': activity['object']['hash']['sha1'], 'sha256': activity['object']['hash']['sha256'], 'sha512': activity['object']['hash']['sha512'], 'published': True, 'filename': activity['object']['hash']['sha1'], 'boxes': []}
                     file_uri = options.django_base_url + '/api/v1/file/' + "?format=json"
                     requests.post(file_uri, data=json.dumps(file_payload), verify=options.django_verify_ssl, headers=headers)
-                    print "Created file: %s" % activity['object']['hash']['sha1']
+                    self.verbose_print("Created file: %s" % activity['object']['hash']['sha1'])
                 elif user_resource_uri and activity['object']['objectType'] == "article":
                     if activity.get('target'):
                         r = requests.get(options.django_base_url + '/api/v1/file/' + '?format=json&uuid=' + activity['target']['object']['id'], verify=options.django_verify_ssl, headers=headers)
@@ -142,7 +142,7 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                         post_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'post': activity['object']['content'], 'published': True, 'boxes': []}
                     post_uri = options.django_base_url + '/api/v1/full_post/' + "?format=json"
                     requests.post(post_uri, data=json.dumps(post_payload), verify=options.django_verify_ssl, headers=headers)
-                    print "Created post from %s" % activity['actor']['displayName']
+                    self.verbose_print("Created post from %s" % activity['actor']['displayName'])
             else:
                 continue
 

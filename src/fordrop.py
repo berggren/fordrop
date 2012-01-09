@@ -130,14 +130,22 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                     requests.post(file_uri, data=json.dumps(file_payload), verify=options.django_verify_ssl, headers=headers)
                     print "Created file: %s" % activity['object']['hash']['sha1']
                 elif user_resource_uri and activity['object']['objectType'] == "article":
-                    if activity['object']['target']:
-                        print "WOHOOOO!"
-                    post_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'post': activity['object']['content'], 'published': True, 'boxes': []}
-                    post_uri = options.django_base_url + '/api/v1/post/' + "?format=json"
+                    if activity.get('target'):
+                        r = requests.get(options.django_base_url + '/api/v1/file/' + '?format=json&uuid=' + activity['target']['object']['id'], verify=options.django_verify_ssl, headers=headers)
+                        _r = json.loads(r.content)
+                        if _r.get('objects'):
+                            target_resource_uri = _r['objects'][0]['resource_uri']
+                            post_payload = {'user': user_resource_uri, 'file': target_resource_uri, 'uuid': activity['object']['id'], 'post': activity['object']['content'], 'published': True, 'boxes': []}
+                        else:
+                            continue
+                    else:
+                        post_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'post': activity['object']['content'], 'published': True, 'boxes': []}
+                    post_uri = options.django_base_url + '/api/v1/full_post/' + "?format=json"
                     requests.post(post_uri, data=json.dumps(post_payload), verify=options.django_verify_ssl, headers=headers)
                     print "Created post from %s" % activity['actor']['displayName']
-                else:
-                    continue
+            else:
+                continue
+
 
     def verbose_print(self, msg):
         if self.verbose:

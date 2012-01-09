@@ -64,9 +64,17 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                         nodes = [x['node'] for x in post['boxes']]
                         if not nodes:
                             continue
+                        if post['file']:
+                            target_type = 'file'
+                            target = requests.get(options.django_base_url + '/api/v1/file/' + '?format=json&uuid=' + post['file']['uuid'], verify=options.django_verify_ssl, headers=headers)
+                        else:
+                            target_type = None
+                            target = None
+                        if target and target.status_code == 200:
+                            target = target.content
                         activity = ActivityStreams()
                         item = ET.Element('event')
-                        item.text = json.dumps(activity.post(post))
+                        item.text = json.dumps(activity.post(post, target))
                         for node in nodes:
                             pubsub.publish(options.pubsub, node, payload=item)
                         requests.put(options.django_base_url + post['resource_uri'] + "?format=json", json.dumps({'published': 'true'}), verify=options.django_verify_ssl, headers=headers)
@@ -122,6 +130,8 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                     requests.post(file_uri, data=json.dumps(file_payload), verify=options.django_verify_ssl, headers=headers)
                     print "Created file: %s" % activity['object']['hash']['sha1']
                 elif user_resource_uri and activity['object']['objectType'] == "article":
+                    if activity['object']['target']:
+                        print "WOHOOOO!"
                     post_payload = {'user': user_resource_uri, 'uuid': activity['object']['id'], 'post': activity['object']['content'], 'published': True, 'boxes': []}
                     post_uri = options.django_base_url + '/api/v1/post/' + "?format=json"
                     requests.post(post_uri, data=json.dumps(post_payload), verify=options.django_verify_ssl, headers=headers)

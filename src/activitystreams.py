@@ -1,3 +1,5 @@
+import json
+
 class ActivityStreams:
     def file(self, obj):
         activity = {}
@@ -16,15 +18,28 @@ class ActivityStreams:
             activity['target'] = target
         return activity
 
-    def post(self, obj):
+    def target_file(self, obj):
         activity = {}
-        published = obj['time_created']
+        object = {
+            'objectType': 'fordrop_file',
+            'id': obj['uuid']
+        }
+        activity['object'] = object
+        return activity
+
+    def post(self, post, target):
+        activity = {}
+        published = post['time_created']
         object = {}
-        target = None
-        actor = self.person(obj['user'])
+        if target:
+            p = json.loads(target)
+            target = self.target_file(p['objects'][0])
+            # print json.dumps(json.loads(target['objects']), indent=4)
+            #target = self.file(target['objects'])
+        actor = self.person(post['user'])
         object['objectType'] = 'article'
-        object['id'] = obj['uuid']
-        object['content'] = obj['post']
+        object['id'] = post['uuid']
+        object['content'] = post['content']
         activity['published'] = published
         activity['verb'] = "post"
         activity['actor'] = actor

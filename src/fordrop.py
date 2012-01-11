@@ -87,6 +87,7 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
         for item in xml.findall('{http://jabber.org/protocol/pubsub#event}event/{http://jabber.org/protocol/pubsub#event}items/{http://jabber.org/protocol/pubsub#event}item'):
             for n in item.getiterator('{http://jabber.org/protocol/pubsub#event}event'):
                 activity = json.loads(n.text)
+                print json.dumps(activity, indent=4)
                 check_if_object_exists = None
                 if activity['object']['objectType'] == "fordrop_file":
                     check_if_object_exists = requests.get(options.django_base_url + '/api/v1/file/' + '?format=json&uuid=' + activity['object']['id'], verify=options.django_verify_ssl, headers=headers)

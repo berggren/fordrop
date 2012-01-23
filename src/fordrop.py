@@ -147,7 +147,6 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
             else:
                 continue
 
-
     def verbose_print(self, msg):
         if self.verbose:
             print msg

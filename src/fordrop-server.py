@@ -79,10 +79,19 @@ class NodeResource:
         body = json.loads(cherrypy.request.body.read(int(cherrypy.request.headers['Content-Length'])))
         config = Form(None, title='Node Config Form')
         config.addField('FORM_TYPE', 'hidden', value='http://jabber.org/protocol/pubsub#node_config')
-        config.addField('pubsub#title', value=body.get('name'))
+        config.addField('pubsub#title', value=body.get('title'))
         config.addField('pubsub#access_model', value="whitelist")
+        config.addField('pubsub#presence-subscribe', value="true")
         self.pubsub.create_node(options.pubsub, None, config=config)
         cherrypy.response.status = 201
+
+    @cherrypy.tools.login_required()
+    def DELETE(self, node=None):
+        print "delete node"
+        if not node:
+            raise cherrypy.HTTPError(501)
+        self.pubsub.delete_node(options.pubsub, node)
+        cherrypy.response.status = 200
 
 class AffiliationResource:
     def __init__(self, pubsub):
@@ -113,14 +122,16 @@ class AffiliationResource:
             raise cherrypy.HTTPError(501)
         body = json.loads(cherrypy.request.body.read(int(cherrypy.request.headers['Content-Length'])))
         self.pubsub.modify_affiliations(options.pubsub, node,  body.get('affiliation'))
+        print body.get('affiliation')
         cherrypy.response.status = 201
 
     @cherrypy.tools.login_required()
-    def DELETE(self, node=None):
-        if not node:
+    def DELETE(self, node=None, jid=None):
+        print "delete affiliation"
+        if not node or not jid:
             raise cherrypy.HTTPError(501)
-        body = json.loads(cherrypy.request.body.read(int(cherrypy.request.headers['Content-Length'])))
-        self.pubsub.modify_affiliations(options.pubsub, node,  body.get('affiliation'))
+        self.pubsub.modify_affiliations(options.pubsub, node, [[jid, 'none']])
+        print [[options.jid, 'outcast']]
         cherrypy.response.status = 200
 
 class SubscriberResource:
@@ -183,4 +194,4 @@ if __name__ == '__main__':
             'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
             }
     }
-    cherrypy.quickstart(root, '/', conf)
+    cherrypy.quickstart(root, '/api/test', conf)

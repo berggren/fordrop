@@ -5,17 +5,17 @@ from optparse import OptionParser
 from activitystreams2 import ActivityStreams
 
 def get(uri, headers):
-	r = requests.get(options.url + uri, headers=headers)
+	r = requests.get(options.url + uri, headers=headers, verify=options.verify_ssl_cert)
 	if r.status_code == requests.codes.ok:
 		return json.loads(r.content)
 	return r.status_code
 
 def post(uri, data, headers):
-	r = requests.post(options.url + uri, json.dumps(data), headers=headers)
+	r = requests.post(options.url + uri, json.dumps(data), headers=headers, verify=options.verify_ssl_cert)
 	return r.status_code
 
 def delete(uri, headers):
-    r = requests.delete(options.url + uri, headers=headers)
+    r = requests.delete(options.url + uri, headers=headers, verify=options.verify_ssl_cert)
     return r.status_code
 
 if __name__ == '__main__':
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     config.read(CONFIG_FILENAME)
     parser = OptionParser(version="%prog 0.1")
     parser.add_option('-u', '--username', action='store', dest='username', default=config.get("fordrop-client", "username"), help='username for fordrop-server')
-    parser.add_option('-k', '--api-key', action='store', dest='api-key', default=config.get("fordrop-client", "api-key"), help='api-key for fordrop-server')
+    parser.add_option('-k', '--api-key', action='store', dest='api_key', default=config.get("fordrop-client", "api-key"), help='api-key for fordrop-server')
     parser.add_option('--url', action='store', dest='url', default=config.get("fordrop-client", "base-url"), help='Base URL for fordrop-server')
     parser.add_option('-n', '--node', action='store', dest='node', help='Show configuration for node')
     parser.add_option('-t', '--title', action='store', dest='title', help='Title for node when creating')
@@ -37,14 +37,24 @@ if __name__ == '__main__':
     parser.add_option('-f', '--file', action='store', dest='file', help='Extract info from file')
     parser.add_option('-p', '--publish', action='store_true', dest='publish', help='Publish to NODE (use with -n & -f)')
     parser.add_option('-j', '--jid', action='store', dest='jid', help='jid to add to affiliations on node')
+    parser.add_option('--verify-ssl-cert', action='store_true', dest='verify_ssl_cert', help='Verify the certficate', default=config.getboolean("django", "verify_ssl"))
+    parser.add_option('-v', '--verbose', action='store_true', dest='verbose', default=config.getboolean("fordrop", "verbose"))
 
     (options, args) = parser.parse_args()
     headers = {
         'content-type': 'application/json',
         'User-Agent': 'fordrop/client',
         'X-Fordrop-Username': options.username,
-        'X-Fordrop-Api-Key': '123456'
+        'X-Fordrop-Api-Key': options.api_key
     }
+
+    if options.verbose:
+        print "--------------------------------------------------------"
+        print "Connected to fordrop REST server"
+        print "Location: %s" % options.url
+        print "Authenticated as %s" % options.username
+        print "--------------------------------------------------------"
+        print ""
 
     try:
         # Create node

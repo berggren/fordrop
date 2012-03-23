@@ -13,7 +13,7 @@ class ActivityStreams:
         published = '1234'
         object = {}
         target = None
-        actor = 'johan'
+        actor = 'Johan Berggren'
         object['objectType'] = 'fordropFile'
         object['hash'] = {'md5': md5, 'sha1': sha1, 'sha256': sha256, 'sha512': sha512, 'ctph': '' }
         object['id'] = uuid.uuid4().urn

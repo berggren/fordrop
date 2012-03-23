@@ -23,6 +23,8 @@ parser.add_option('--bind-port', action='store', dest='bind_port', default=confi
 def login_required():
     username = cherrypy.request.headers.get('X-Fordrop-Username')
     api_key = cherrypy.request.headers.get('X-Fordrop-Api-Key')
+    print username
+    print api_key
     if username == options.username and api_key == options.api_key:
         return True
     raise cherrypy.HTTPError("401 Unauthorized")
@@ -194,4 +196,4 @@ if __name__ == '__main__':
             'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
             }
     }
-    cherrypy.quickstart(root, '/api/test', conf)
+    cherrypy.quickstart(root, '/', conf)

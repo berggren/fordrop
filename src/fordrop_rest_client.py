@@ -5,10 +5,10 @@ from optparse import OptionParser
 from activitystreams2 import ActivityStreams
 
 def get(uri, headers):
-	r = requests.get(options.url + uri, headers=headers, verify=options.verify_ssl_cert)
-	if r.status_code == requests.codes.ok:
-		return json.loads(r.content)
-	return r.status_code
+    r = requests.get(options.url + uri, headers=headers, verify=options.verify_ssl_cert)
+    if r.status_code == requests.codes.ok:
+        return json.loads(r.content)
+    return r.status_code
 
 def post(uri, data, headers):
 	r = requests.post(options.url + uri, json.dumps(data), headers=headers, verify=options.verify_ssl_cert)

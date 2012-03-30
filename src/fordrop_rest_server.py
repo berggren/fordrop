@@ -1,10 +1,11 @@
-from client import FordropXmpp
 from xml.etree import cElementTree as ET
 import cherrypy
 import json
-from sleekxmpp.plugins.xep_0004.stanza.form import Form
 import ConfigParser
 from optparse import OptionParser
+import sleekxmpp
+from sleekxmpp.xmlstream.jid import JID
+from sleekxmpp.plugins.xep_0004.stanza.form import Form
 
 CONFIG_FILENAME = 'fordrop.cfg'
 config = ConfigParser.ConfigParser()
@@ -19,6 +20,36 @@ parser.add_option('--pubsub', action='store', dest='pubsub', default=config.get(
 parser.add_option('--bind-address', action='store', dest='bind_address', default=config.get("fordrop-server", "bind_address"), help='Address to bind to (HTTP server)')
 parser.add_option('--bind-port', action='store', dest='bind_port', default=config.getint("fordrop-server", "bind_port"), help='Port to bind to (HTTP server)')
 (options, args) = parser.parse_args()
+
+class XmppClient(sleekxmpp.ClientXMPP):
+    def __init__(self, jid, password, verbose=False, priority=0):
+        jid = JID(jid)
+        sleekxmpp.ClientXMPP.__init__(self, jid.full, password)
+        self.jid = jid.full
+        self.priority = priority
+        self.verbose = verbose
+        self.register_plugin('xep_0004')
+        self.register_plugin('xep_0030')
+        self.register_plugin('xep_0060')
+        self.add_event_handler("session_start", self.start)
+
+    def run(self, server, threaded=False):
+        self.verbose_print("==> Connecting to %s as %s.." % (server, self.jid))
+        self.connect((server, 5222))
+        self.process(threaded=threaded)
+
+    def start(self, event):
+        if event:
+            self.verbose_print("==> Got event " + event)
+        self.verbose_print("==> Connected!")
+        self.verbose_print("==> Fetching roster")
+        self.get_roster()
+        self.verbose_print("==> Send priority %i for this connection" % self.priority)
+        self.send_presence(ppriority=self.priority)
+
+    def verbose_print(self, msg):
+        if self.verbose:
+            print msg
 
 def login_required():
     username = cherrypy.request.headers.get('X-Fordrop-Username')
@@ -174,7 +205,7 @@ class PublishResource:
 
 class Root:
     def __init__(self):
-        self.xmpp = FordropXmpp(options.jid, options.password, verbose=True, priority=127)
+        self.xmpp = XmppClient(options.jid, options.password, verbose=True, priority=127)
         self.xmpp.run(options.server, threaded=True)
         self.pubsub = self.xmpp['xep_0060']
 

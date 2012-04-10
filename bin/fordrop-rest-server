@@ -10,7 +10,6 @@ from sleekxmpp.plugins.xep_0004.stanza.form import Form
 
 config = ConfigParser.ConfigParser()
 config.read('/etc/fordrop.cfg')
-config.read('~/.fordrop.cfg')
 parser = OptionParser(version="%prog 0.1")
 parser.add_option('-u', '--username', action='store', dest='username', default=config.get("client", "username"), help='username for fordropcore-server')
 parser.add_option('-k', '--api-key', action='store', dest='api_key', default=config.get("client", "api-key"), help='api-key for server')

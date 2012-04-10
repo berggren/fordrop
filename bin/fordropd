@@ -4,8 +4,6 @@ import logging
 import sleekxmpp
 from sleekxmpp.xmlstream.jid import JID
 import sys
-# Setup for development
-sys.path.append("/Users/jbn/s/code/fordrop-core")
 from fordrop.activitystreams import is_activity
 
 logging.basicConfig(level=logging.ERROR, format="%(levelname)-8s %(message)s")

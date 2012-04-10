@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+import sys
+import ConfigParser
+import json
+from optparse import OptionParser
+# Setup for development
+sys.path.append("/Users/jbn/s/code/fordrop-core")
+from fordrop.client import FordropRestClient
+from fordrop.activitystreams import ActivityStreams
+
+if __name__ == '__main__':
+    config = ConfigParser.ConfigParser()
+    config.read('/etc/fordrop.cfg')
+    config.read('~/.fordrop.cfg')
+    try:
+        parser = OptionParser(version="%prog 0.1")
+        parser.add_option('--username', action='store', dest='username', default=config.get("client", "username"), help='username for fordrop-server')
+        parser.add_option('--api-key', action='store', dest='api_key', default=config.get("client", "api-key"), help='api-key for fordrop-server')
+        parser.add_option('--url', action='store', dest='url', default=config.get("client", "base-url"), help='Base URL for fordrop-server')
+        parser.add_option('--verify-ssl-cert', action='store_true', dest='verify_ssl_cert', help='Verify the certficate', default=config.getboolean("django", "verify_ssl"))
+        parser.add_option('-l', '--list', action='store_true', dest='list', help='List nodes')
+        parser.add_option('-n', '--node', action='store', dest='node', help='Node', metavar='NODE')
+        parser.add_option('-q', '--query', action='store_true', dest='query', help='Query node configuration')
+        parser.add_option('-c', '--create', action='store', dest='create', help='Create new node', metavar='NODE')
+        parser.add_option('-d', '--delete', action='store_true', dest='delete', help='Delete node')
+        parser.add_option('-t', '--terse', action='store_true', dest='terse', help='Terse output')
+        parser.add_option('-a', '--affiliations', action='store_true', dest='affiliations', help='List affiliations for node')
+        parser.add_option('-A', '--add-affiliation', action='store', dest='affiliation', help='Add affiliation for node', metavar='JID')
+        parser.add_option('-D', '--delete-affiliation', action='store', dest='delete_affiliation', help='Add affiliation for node', metavar='JID')
+        parser.add_option('-s', '--subscribers', action='store_true', dest='subscribers', help='List subscribers for node', metavar='NODE')
+        parser.add_option('--subscribe', action='store', dest='subscribe', help='Subscribe to node', metavar='NODE')
+        parser.add_option('--service', action='store', dest='service', help='Pubsub service', metavar='SERVICE')
+        parser.add_option('-p', '--publish', action='store', dest='publish', help='publish file', metavar='FILE')
+        parser.add_option('-v', '--verbose', action='store_true', dest='verbose', default=config.getboolean("fordrop", "verbose"))
+        (options, args) = parser.parse_args()
+    except ConfigParser.NoSectionError:
+        sys.exit(1)
+    fdrop = FordropRestClient(url=options.url, username=options.username, api_key=options.api_key)
+
+    if options.verbose:
+        print "-== Connected to fordrop REST server ==-"
+        print "-== Location: %s ==-" % options.url
+        print "-== Authenticated as %s ==-" % options.username
+
+    if options.list:
+        for node in fdrop.list_nodes():
+            if options.terse:
+                print node['name']
+            else:
+                print "%s - %s" % (node['name'], node['title'])
+
+    if options.node and options.query:
+        print json.dumps(json.loads(fdrop.query_node(node=options.node)), indent=2)
+
+    if options.create:
+        print fdrop.create_node(title=options.create)
+
+    if options.node and options.delete:
+        print fdrop.delete_node(node=options.node)
+
+    if options.node and options.affiliations:
+        for jid in fdrop.list_affiliations(node=options.node):
+            print jid
+
+    if options.node and options.affiliation:
+        print fdrop.add_affiliation(node=options.node, jid=options.affiliation)
+
+    if options.node and options.delete_affiliation:
+        print fdrop.remove_affiliation(node=options.node, jid=options.delete_affiliation)
+
+    if options.node and options.subscribers:
+        print fdrop.list_subscribers(node=options.node)
+
+    if options.node and options.publish:
+        activity = ActivityStreams()
+        payload = activity.from_file(options.publish)
+        fdrop.publish(node=options.node, payload=payload)
+
+    if options.subscribe and options.service:
+        print fdrop.subscribe(node=options.subscribe, service=options.service)

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from xml.etree import cElementTree as ET
 import cherrypy
 import json
@@ -7,18 +8,18 @@ import sleekxmpp
 from sleekxmpp.xmlstream.jid import JID
 from sleekxmpp.plugins.xep_0004.stanza.form import Form
 
-CONFIG_FILENAME = 'fordrop.cfg'
 config = ConfigParser.ConfigParser()
-config.read(CONFIG_FILENAME)
+config.read('/etc/fordrop.cfg')
+config.read('~/.fordrop.cfg')
 parser = OptionParser(version="%prog 0.1")
-parser.add_option('-u', '--username', action='store', dest='username', default=config.get("fordrop-client", "username"), help='username for fordrop-server')
-parser.add_option('-k', '--api-key', action='store', dest='api_key', default=config.get("fordrop-client", "api-key"), help='api-key for fordrop-server')
-parser.add_option('-j', '--jid', action='store', dest='jid', default=config.get("fordrop-server", "jid"), help='jid, XMPP username')
-parser.add_option('-p', '--password', action='store', dest='password', default=config.get("fordrop-server", "password"), help='password, XMPP password')
-parser.add_option('-s', '--server', action='store', dest='server', default=config.get("fordrop-server", "server"), help='XMPP server')
+parser.add_option('-u', '--username', action='store', dest='username', default=config.get("client", "username"), help='username for fordropcore-server')
+parser.add_option('-k', '--api-key', action='store', dest='api_key', default=config.get("client", "api-key"), help='api-key for server')
+parser.add_option('-j', '--jid', action='store', dest='jid', default=config.get("server", "jid"), help='jid, XMPP username')
+parser.add_option('-p', '--password', action='store', dest='password', default=config.get("server", "password"), help='password, XMPP password')
+parser.add_option('-s', '--server', action='store', dest='server', default=config.get("server", "server"), help='XMPP server')
 parser.add_option('--pubsub', action='store', dest='pubsub', default=config.get("fordrop", "pubsub"), help='XMPP pubsub service')
-parser.add_option('--bind-address', action='store', dest='bind_address', default=config.get("fordrop-server", "bind_address"), help='Address to bind to (HTTP server)')
-parser.add_option('--bind-port', action='store', dest='bind_port', default=config.getint("fordrop-server", "bind_port"), help='Port to bind to (HTTP server)')
+parser.add_option('--bind-address', action='store', dest='bind_address', default=config.get("server", "bind_address"), help='Address to bind to (HTTP server)')
+parser.add_option('--bind-port', action='store', dest='bind_port', default=config.getint("server", "bind_port"), help='Port to bind to (HTTP server)')
 (options, args) = parser.parse_args()
 
 class XmppClient(sleekxmpp.ClientXMPP):
@@ -54,8 +55,6 @@ class XmppClient(sleekxmpp.ClientXMPP):
 def login_required():
     username = cherrypy.request.headers.get('X-Fordrop-Username')
     api_key = cherrypy.request.headers.get('X-Fordrop-Api-Key')
-    print username
-    print api_key
     if username == options.username and api_key == options.api_key:
         return True
     raise cherrypy.HTTPError("401 Unauthorized")
@@ -92,7 +91,7 @@ class NodeResource:
             'name': node,
             'title': self.nodes.get(node),
             'config': form.get_values(),
-        }]})
+            }]})
 
     def get_nodes(self, service):
         for item in self.pubsub.get_nodes(service).findall('{http://jabber.org/protocol/disco#items}query'):
@@ -115,12 +114,12 @@ class NodeResource:
         config.addField('pubsub#title', value=body.get('title'))
         config.addField('pubsub#access_model', value="whitelist")
         config.addField('pubsub#presence-subscribe', value="true")
-        self.pubsub.create_node(options.pubsub, None, config=config)
+        self.pubsub.create_node(options.pubsub, body.get('name'), config=config)
         cherrypy.response.status = 201
+
 
     @cherrypy.tools.login_required()
     def DELETE(self, node=None):
-        print "delete node"
         if not node:
             raise cherrypy.HTTPError(501)
         self.pubsub.delete_node(options.pubsub, node)
@@ -155,16 +154,13 @@ class AffiliationResource:
             raise cherrypy.HTTPError(501)
         body = json.loads(cherrypy.request.body.read(int(cherrypy.request.headers['Content-Length'])))
         self.pubsub.modify_affiliations(options.pubsub, node,  body.get('affiliation'))
-        print body.get('affiliation')
         cherrypy.response.status = 201
 
     @cherrypy.tools.login_required()
     def DELETE(self, node=None, jid=None):
-        print "delete affiliation"
         if not node or not jid:
             raise cherrypy.HTTPError(501)
         self.pubsub.modify_affiliations(options.pubsub, node, [[jid, 'none']])
-        print [[options.jid, 'outcast']]
         cherrypy.response.status = 200
 
 class SubscriberResource:
@@ -188,6 +184,18 @@ class SubscriberResource:
             'node': node,
             'subscribers': self.get_subscribers(options.pubsub, node)
         })
+
+    @cherrypy.tools.login_required()
+    def POST(self):
+        body = json.loads(cherrypy.request.body.read(int(cherrypy.request.headers['Content-Length'])))
+        self.pubsub.subscribe(jid=body.get('service'), node=body.get('node'), subscribee=options.jid)
+        cherrypy.response.status = 201
+
+    @cherrypy.tools.login_required()
+    def DELETE(self):
+        body = json.loads(cherrypy.request.body.read(int(cherrypy.request.headers['Content-Length'])))
+        self.pubsub.unsubscribe(jid=body.get('service'), node=body.get('node'), subscribee=options.jid)
+        cherrypy.response.status = 200
 
 class PublishResource:
     def __init__(self, pubsub):

@@ -1,30 +1,26 @@
 [fordrop]
-verbose = false
-daemon = false
-jid = user@example.com
-password = secret
-server = xmpp.example.com
-pubsub = pubsub.example.com
-log = false
-no_events = true
-priority = -1
-django = false
-listen = false
-
-[django]
-user = django-user
-api_key = key
-base_url = http://127.0.0.1
-verify_ssl = true
-
-[client]
 username = user
 api-key = secret
-base-url = http://127.0.0.1
+base-url = http://127.0.0.1:8080
+verify_ssl = true
+verbose = false
 
-[server]
-jid = xmpp user
+[fordropd]
+jid = john@example.org
 password = secret
-server = xmpp.example.com
+server = xmpp.example.org
+pubsub_service = pubsub.example.org
+verbose = false
+log = false
+priority = 127
+plugins = print_to_stdout
+
+[fordrop-rest-server]
+username = user
+api-key = secret
+jid = john@example.org
+password = secret
+server = xmpp.example.org
+pubsub_service = pubsub.example.org
 bind_address = 127.0.0.1
 bind_port = 8080

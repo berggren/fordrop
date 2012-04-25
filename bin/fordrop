@@ -34,7 +34,7 @@ if __name__ == '__main__':
     except ConfigParser.NoSectionError:
         print "No configuration file found"
         sys.exit(1)
-    fdrop = FordropRestClient(url=options.url, username=options.username, api_key=options.api_key)
+    fdrop = FordropRestClient(url=options.url, username=options.username, api_key=options.api_key, verify=False)
 
     if options.verbose:
         print "-== Connected to fordrop REST server ==-"

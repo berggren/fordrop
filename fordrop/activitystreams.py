@@ -23,6 +23,21 @@ class ActivityStreams:
         activity['actor'] = actor
         activity['object'] = object
         return activity
+    def from_django(self, actor=None, uuid=None, md5=None, sha1=None, sha256=None, sha512=None):
+        ctph = ''
+        activity = {}
+        published = '1234'
+        object = {}
+        target = None
+        object['objectType'] = 'fordropFile'
+        object['hash'] = {'md5': md5, 'sha1': sha1, 'sha256': sha256, 'sha512': sha512, 'ctph': ctph }
+        object['id'] = uuid
+        activity['published'] = published
+        activity['verb'] = "post"
+        activity['actor'] = actor
+        activity['object'] = object
+        return activity
+
 
 def is_activity(activity):
     if not isinstance(activity, dict):

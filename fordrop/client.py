@@ -2,7 +2,7 @@ import json
 import requests
 
 class FordropRestClient:
-    def __init__(self, url=None, username=None, api_key=None, verify=True):
+    def __init__(self, url=None, username=None, api_key=None, verify=False):
         self.url = url
         self.verify = verify
         self.headers = {
@@ -13,7 +13,7 @@ class FordropRestClient:
         }
 
     def _http_get(self, uri):
-        r = requests.get(self.url + uri, headers=self.headers, verify=self.verify)
+        r = requests.get(self.url + uri, headers=self.headers, verify=False)
         if r.status_code == requests.codes.ok:
             return json.loads(r.content)
         return r.status_code

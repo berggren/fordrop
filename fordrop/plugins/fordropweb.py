@@ -1,7 +1,10 @@
 import json
 import requests
+import ConfigParser
+config = ConfigParser.ConfigParser()
+config.read('/etc/fordrop.cfg')
 
-baseurl = 'http://127.0.0.1:8080/api/v1/'
+baseurl = config.get('fordropweb', 'apiurl')
 headers = {'content-type': 'application/json'}
 
 def get_or_create_file(activity):
@@ -75,5 +78,3 @@ def plugin(activity):
                 return
             return True
     return True
-
-print plugin(activity)

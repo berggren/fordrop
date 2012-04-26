@@ -41,7 +41,7 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
                 activity = json.loads(event.text)
                 if is_activity(activity):
                     for name, plugin in self.active_plugins.items():
-                        plugin.plugin(activity)
+                        plugin.plugin(event.text)
 
     def verbose_print(self, msg):
         if self.verbose:

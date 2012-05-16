@@ -5,7 +5,7 @@ config = ConfigParser.ConfigParser()
 config.read('/etc/fordrop.cfg')
 
 baseurl = config.get('fordropweb', 'apiurl')
-headers = {'content-type': 'application/json'}
+headers = {'content-type': 'application/json', 'Authorization': 'ApiKey %s:%s' % (config.get('fordrop-plugin-fordropweb', 'username'), config.get('fordrop-plugin-fordropweb', 'api_key'))}
 
 def get_or_create_file(activity):
     activity_json = json.loads(activity)

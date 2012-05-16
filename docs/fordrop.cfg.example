@@ -5,6 +5,10 @@ base-url = http://127.0.0.1:8080
 verify_ssl = true
 verbose = false
 
+[fordrop-plugin-fordropweb]
+username = user
+api_key = secret
+
 [fordropd]
 jid = john@example.org
 password = secret
@@ -24,3 +28,4 @@ server = xmpp.example.org
 pubsub_service = pubsub.example.org
 bind_address = 127.0.0.1
 bind_port = 8080
+

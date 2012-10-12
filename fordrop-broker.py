@@ -2,9 +2,9 @@
 import json
 import logging
 import sleekxmpp
-from sleekxmpp.xmlstream.jid import JID
+from sleekxmpp.jid import JID
 import sys
-from fordrop.activitystreams import is_activity
+from lib.fordrop.core.activitystreams import is_activity
 
 logging.basicConfig(level=logging.ERROR, format="%(levelname)-8s %(message)s")
 class FordropXmpp(sleekxmpp.ClientXMPP):
@@ -20,7 +20,8 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
         self.plugins = plugins
         self.active_plugins = {}
         for plugin in self.plugins:
-            self.active_plugins[plugin] = __import__('fordrop.plugins.%s' % plugin, fromlist=['plugins'])
+            self.active_plugins[plugin] = __import__('lib.fordrop.plugins.%s' % plugin, 
+                    fromlist=['plugins'])
 
     def run(self, server, threaded=False):
         self.verbose_print("==> Connecting to %s as %s.." % (server, self.jid))
@@ -33,7 +34,10 @@ class FordropXmpp(sleekxmpp.ClientXMPP):
         self.get_roster()
         self.verbose_print("==> Send priority %i for this connection" % self.priority)
         self.send_presence(ppriority=self.priority)
-        xmpp.add_handler("<message xmlns='jabber:client'><event xmlns='http://jabber.org/protocol/pubsub#event' /></message>", xmpp.pubsub_event_handler, name='Pubsub Event')
+        xmpp.add_handler(
+                "<message xmlns='jabber:client'><event xmlns='http://jabber.org/protocol/pubsub#event' /></message>",
+                xmpp.pubsub_event_handler,
+                name='Pubsub Event')
 
     def pubsub_event_handler(self, xml):
         for item in xml.findall('{http://jabber.org/protocol/pubsub#event}event/{http://jabber.org/protocol/pubsub#event}items/{http://jabber.org/protocol/pubsub#event}item'):
@@ -52,7 +56,7 @@ if __name__ == "__main__" :
     from optparse import OptionParser
     try:
         config = ConfigParser.ConfigParser()
-        config.read('/etc/fordrop.cfg')
+        config.read('/home/jbn/.fordrop.cfg')
         parser = OptionParser(version="%prog 0.1")
         parser.add_option('-v', '--verbose', action='store_true', dest='verbose', default=config.getboolean("fordropd", "verbose"))
         parser.add_option('-j', '--jid', action='store', dest='jid', default=config.get("fordropd", "jid"))

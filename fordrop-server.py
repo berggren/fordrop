@@ -160,6 +160,7 @@ class AffiliationResource:
         if not node or not jid:
             raise cherrypy.HTTPError(501)
         self.pubsub.modify_affiliations(options.pubsub, node, [[jid, 'none']])
+        self.pubsub.modify_subscriptions(options.pubsub, node, [[jid, 'none']])
         cherrypy.response.status = 200
 
 class SubscriberResource:

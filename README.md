@@ -1,1 +1,0 @@
-fordrop core

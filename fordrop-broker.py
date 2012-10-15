@@ -2,72 +2,53 @@
 import json
 import logging
 import sleekxmpp
+import argparse
+import ConfigParser
 from sleekxmpp.jid import JID
 import sys
 from lib.fordrop.core.activitystreams import is_activity
+from lib.fordrop.core.client import FordropXmppClient
+from lib.fordrop.core.utils import init_logging
 
-logging.basicConfig(level=logging.ERROR, format="%(levelname)-8s %(message)s")
-class FordropXmpp(sleekxmpp.ClientXMPP):
-    def __init__(self, jid, password, verbose=False, priority=0, plugins=[]):
-        sleekxmpp.ClientXMPP.__init__(self, jid.full, password)
-        self.jid = jid.full
-        self.priority = priority
-        self.verbose = verbose
-        self.register_plugin('xep_0004')
-        self.register_plugin('xep_0030')
-        self.register_plugin('xep_0060')
-        self.add_event_handler("session_start", self.start)
-        self.plugins = plugins
-        self.active_plugins = {}
-        for plugin in self.plugins:
-            self.active_plugins[plugin] = __import__('lib.fordrop.plugins.%s' % plugin, 
-                    fromlist=['plugins'])
+log = logging.getLogger()
+sleekxmpp_log = logging.getLogger("sleekxmpp")
+sleekxmpp_log.setLevel(logging.ERROR)
 
-    def run(self, server, threaded=False):
-        self.verbose_print("==> Connecting to %s as %s.." % (server, self.jid))
-        self.connect((server, 5222))
-        self.process(threaded=threaded)
-
-    def start(self, event):
-        self.verbose_print("==> Connected!")
-        self.verbose_print("==> Fetching roster")
-        self.get_roster()
-        self.verbose_print("==> Send priority %i for this connection" % self.priority)
-        self.send_presence(ppriority=self.priority)
-        xmpp.add_handler(
-                "<message xmlns='jabber:client'><event xmlns='http://jabber.org/protocol/pubsub#event' /></message>",
-                xmpp.pubsub_event_handler,
-                name='Pubsub Event')
-
-    def pubsub_event_handler(self, xml):
-        for item in xml.findall('{http://jabber.org/protocol/pubsub#event}event/{http://jabber.org/protocol/pubsub#event}items/{http://jabber.org/protocol/pubsub#event}item'):
-            for event in item.getiterator('{http://jabber.org/protocol/pubsub#event}event'):
-                activity = json.loads(event.text)
-                if is_activity(activity):
-                    for name, plugin in self.active_plugins.items():
-                        plugin.plugin(event.text)
-
-    def verbose_print(self, msg):
-        if self.verbose:
-            print msg
+def main():
+    jid = JID(args.jid)
+    xmpp = FordropXmppClient(
+            jid, 
+            args.password, 
+            args.verbose,
+            int(args.priority),
+            plugins=config.get('fordropd', 'plugins').split(','))
+    xmpp.run(args.server)
 
 if __name__ == "__main__" :
-    import ConfigParser
-    from optparse import OptionParser
-    try:
-        config = ConfigParser.ConfigParser()
-        config.read('/home/jbn/.fordrop.cfg')
-        parser = OptionParser(version="%prog 0.1")
-        parser.add_option('-v', '--verbose', action='store_true', dest='verbose', default=config.getboolean("fordropd", "verbose"))
-        parser.add_option('-j', '--jid', action='store', dest='jid', default=config.get("fordropd", "jid"))
-        parser.add_option('-p', '--password', action='store', dest='password', default=config.get("fordropd", "password"))
-        parser.add_option('-s', '--server', action='store', dest='server', help='XMPP server', default=config.get("fordropd", "server"))
-        parser.add_option('-u', '--pubsub', action='store', dest='pubsub', help='Pubsub service, ex pubsub.example.com', default=config.get("fordropd", "pubsub_service"))
-        parser.add_option('-l', '--log', action='store_true', dest='log', help='Log to syslog', default=config.getboolean("fordropd", "log"))
-        parser.add_option('-o', '--priority', action='store', type="int", dest='priority', help='Priority for this connection', default=config.getint("fordropd", "priority"))
-        (options, args) = parser.parse_args()
-    except ConfigParser.NoSectionError:
+    init_logging()
+    conf_parser = argparse.ArgumentParser(add_help=False)
+    conf_parser.add_argument("-c", "--config",
+        help="Specify config file",
+        metavar="FILE")
+    args, remaining_argv = conf_parser.parse_known_args()
+    
+    if args.config:
+        config = ConfigParser.SafeConfigParser()
+        config.read([args.config])
+        defaults = dict(config.items("fordropd"))
+    else:
+        log.error("No configuration file found, you must use --config FILE")
         sys.exit(1)
-    jid = JID(options.jid)
-    xmpp = FordropXmpp(jid, options.password, options.verbose, options.priority, plugins=config.get('fordropd', 'plugins').split(','))
-    xmpp.run(options.server)
+    parser = argparse.ArgumentParser(
+        parents=[conf_parser],
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.set_defaults(**defaults)
+    parser.add_argument("-d", "--debug",
+        help="Debug",
+        action="store_true",
+        required=False)
+    args = parser.parse_args(remaining_argv)
+    if args.debug:
+        sleekxmpp_log.setLevel(logging.DEBUG)
+    main()

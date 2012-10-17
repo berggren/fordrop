@@ -9,16 +9,12 @@ import ConfigParser
 import json
 import logging
 
-from lib.fordrop.core.client import FordropRestClient
+from lib.fordrop.core.http import RestClient
 from lib.fordrop.core.activitystreams import ActivityStreams
 from lib.fordrop.core.utils import init_logging
 
-log = logging.getLogger()
-requests_log = logging.getLogger("requests")
-requests_log.setLevel(logging.WARNING)
-
 def main():
-    fordrop = FordropRestClient(
+    fordrop = RestClient(
             url=args.url, 
             username=args.username, 
             api_key=args.apikey, 
@@ -61,6 +57,9 @@ def main():
         fordrop.publish(node=args.node, payload=payload)
 
 if __name__ == '__main__':
+    log = logging.getLogger()
+    requests_log = logging.getLogger("requests")
+    requests_log.setLevel(logging.WARNING)
     init_logging()
     conf_parser = argparse.ArgumentParser(add_help=False)
     conf_parser.add_argument("-c", "--config",

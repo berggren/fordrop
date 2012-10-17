@@ -1,30 +1,24 @@
 #!/usr/bin/env python
-import json
+import sys
 import logging
-import sleekxmpp
 import argparse
 import ConfigParser
-from sleekxmpp.jid import JID
-import sys
-from lib.fordrop.core.activitystreams import is_activity
-from lib.fordrop.core.client import FordropXmppClient
+from lib.fordrop.core.xmpp import Client
 from lib.fordrop.core.utils import init_logging
 
-log = logging.getLogger()
-sleekxmpp_log = logging.getLogger("sleekxmpp")
-sleekxmpp_log.setLevel(logging.ERROR)
-
 def main():
-    jid = JID(args.jid)
-    xmpp = FordropXmppClient(
-            jid, 
+    xmpp = Client(
+            args.jid, 
             args.password, 
-            args.verbose,
-            int(args.priority),
+            pubsub=True,
+            priority=int(args.priority),
             plugins=config.get('fordropd', 'plugins').split(','))
     xmpp.run(args.server)
 
 if __name__ == "__main__" :
+    log = logging.getLogger()
+    sleekxmpp_log = logging.getLogger("sleekxmpp")
+    sleekxmpp_log.setLevel(logging.ERROR)
     init_logging()
     conf_parser = argparse.ArgumentParser(add_help=False)
     conf_parser.add_argument("-c", "--config",

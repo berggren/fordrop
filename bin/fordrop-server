@@ -4,8 +4,8 @@ import logging
 import argparse
 import ConfigParser
 import cherrypy
-from lib.fordrop.core.utils import init_logging, login_required
-from lib.fordrop.core.http import NodeResource, AffiliationResource, SubscriberResource, PublishResource, Root
+from fordrop.core.utils import init_logging, login_required
+from fordrop.core.http import NodeResource, AffiliationResource, SubscriberResource, PublishResource, Root
 
 def main():
     root = Root(args)

@@ -9,9 +9,9 @@ import ConfigParser
 import json
 import logging
 
-from lib.fordrop.core.http import RestClient
-from lib.fordrop.core.activitystreams import ActivityStreams
-from lib.fordrop.core.utils import init_logging
+from fordrop.core.http import RestClient
+from fordrop.core.activitystreams import ActivityStreams
+from fordrop.core.utils import init_logging
 
 def main():
     fordrop = RestClient(

@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+# Copyright (C) 2012 NORDUnet A/S.
+# This file is part of fordrop - https://fordrop.org
+# See the file 'docs/LICENSE' for copying permission.
+
 import sys
 import logging
 import argparse
@@ -6,8 +10,10 @@ import ConfigParser
 import cherrypy
 from fordrop.core.utils import init_logging, login_required
 from fordrop.core.http import NodeResource, AffiliationResource, SubscriberResource, PublishResource, Root
+from fordrop.common.logo import logo
 
 def main():
+    print logo()
     root = Root(args)
     root.node = NodeResource(root.pubsub, args)
     root.affiliations = AffiliationResource(root.pubsub, args)
@@ -23,15 +29,15 @@ def main():
         '/': {
             'request.dispatch': cherrypy.dispatch.MethodDispatcher(),
             'tools.login_required.on': True,
-            'tools.login_required.args': args
+            'tools.login_required.args': args,
             }
     }
     cherrypy.quickstart(root, '/', conf)
 
 if __name__ == '__main__':
     log = logging.getLogger()
-    sleekxmpp_log = logging.getLogger("sleekxmpp")
-    sleekxmpp_log.setLevel(logging.ERROR)
+    logging.getLogger("sleekxmpp").setLevel(logging.ERROR)
+    logging.getLogger('cherrypy.error').setLevel(logging.ERROR)
     init_logging()
     conf_parser = argparse.ArgumentParser(add_help=False)
     conf_parser.add_argument("-c", "--config",
@@ -56,10 +62,10 @@ if __name__ == '__main__':
             required=False)
     args = parser.parse_args(remaining_argv)
     if args.debug:
-        sleekxmpp_log.setLevel(logging.DEBUG)
+        logging.getLogger("sleekxmpp").setLevel(logging.DEBUG)
+        logging.getLogger("cherrypy.error").setLevel(logging.DEBUG)
     
     cherrypy.tools.login_required = cherrypy.Tool('on_start_resource', login_required)
     main()
-
 
 

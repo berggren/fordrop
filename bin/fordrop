@@ -3,11 +3,12 @@
 # This file is part of fordrop - https://fordrop.org
 # See the file 'docs/LICENSE' for copying permission.
 
-import sys
 import argparse
 import ConfigParser
 import json
 import logging
+import os
+import sys
 
 from fordrop.core.http import RestClient
 from fordrop.core.activitystreams import ActivityStreams
@@ -26,13 +27,16 @@ def main():
         for node in fordrop.list_nodes():
             print "[%s] %s" % (node['name'], node['title'])
     if args.query:
-        print json.dumps(
-                json.loads(fordrop.query_node(node=args.node)),
-                indent=2)
-        print "Members: ", [member for member in
-                fordrop.list_affiliations(node=args.node)]
-        print "Subscribers: ", [subscriber for subscriber in
-                fordrop.list_subscribers(node=args.node)]
+        j = json.loads(fordrop.query_node(node=args.query))
+        print '\n' + j['node'][0]['title']
+        print 'Members: ', ', '.join(fordrop.list_affiliations(node=args.query))
+        print 'Subscribers: ', ','.join(fordrop.list_subscribers(node=args.query))
+        print ''
+        for key, value in j['node'][0]['config'].items():
+            if 'FORM' in key:
+                continue
+            print '%-25s | %-15s' % (str(key.replace('pubsub#', '')), str(value))
+        print ''
     if args.create_node:
         print fordrop.create_node(
                 title=args.create_node)
@@ -71,8 +75,14 @@ if __name__ == '__main__':
         config.read([args.config])
         defaults = dict(config.items("fordrop"))
     else:
-        log.error("No configuration file found, you must use --config FILE")
-        sys.exit(1)
+        config = ConfigParser.SafeConfigParser()
+        home = os.getenv('HOME')
+        config.read('%s/.fordrop/config' % home)
+        try:
+            defaults = dict(config.items("fordrop"))
+        except ConfigParser.NoSectionError:
+            log.error("No configuration file found, you must use --config FILE")
+            sys.exit(1)
     parser = argparse.ArgumentParser(
         parents=[conf_parser],
         description=__doc__,
@@ -85,7 +95,8 @@ if __name__ == '__main__':
             required=False)
     parser.add_argument("--query", 
             help="Query node", 
-            action="store_true",
+            action="store",
+            metavar='NODE',
             required=False)
     parser.add_argument("--create-node", 
             help="Create node", 

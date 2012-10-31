@@ -1,3 +1,7 @@
+# Copyright (C) 2012 NORDUnet A/S.
+# This file is part of fordrop - https://fordrop.org
+# See the file 'docs/LICENSE' for copying permission.
+
 import json
 import cherrypy
 import requests
